@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:pbp_project_flutter_speedrun/helpers/database_helper.dart';
 import 'package:pbp_project_flutter_speedrun/models/task_model.dart';
 import 'package:pbp_project_flutter_speedrun/screens/add_task_screen.dart';
@@ -16,9 +14,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   DatabaseHelper databaseHelper = DatabaseHelper();
-  List<Task>? taskList;
-  int count = 0;
-
+  List<Task> taskList = []; 
   @override
   void initState() {
     super.initState();
@@ -37,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const HistoryScreen()),
-              ).then((_) => updateListView());
+              ).then((_) => updateListView()); 
             },
           ),
           IconButton(
@@ -46,12 +42,14 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
+              ).then((_) {
+                updateListView(); 
+              });
             },
           ),
         ],
       ),
-      body: taskList == null || taskList!.isEmpty
+      body: taskList.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -59,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Icon(Icons.task, size: 100, color: Colors.grey[400]),
                   const SizedBox(height: 20),
                   Text(
-                    'No tasks yet!',
+                    'No active tasks!',
                     style: TextStyle(fontSize: 20, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 10),
@@ -71,19 +69,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             )
           : ListView.builder(
-              itemCount: count,
+              itemCount: taskList.length,
               itemBuilder: (BuildContext context, int position) {
-                return _buildTaskCard(taskList![position]);
+                return _buildTaskCard(taskList[position]);
               },
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddTaskScreen(task: Task()),
-            ),
-          ).then((_) => updateListView());
+          _navigateToAddTask();
         },
         child: const Icon(Icons.add),
       ),
@@ -91,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTaskCard(Task task) {
-    Color priorityColor = _getPriorityColor(task.priority ?? 'Low');
+    Color priorityColor = _getPriorityColor(task.priority);
 
     return Card(
       elevation: 2,
@@ -100,12 +93,12 @@ class _HomeScreenState extends State<HomeScreen> {
         leading: CircleAvatar(
           backgroundColor: priorityColor,
           child: Text(
-            task.priority?[0] ?? 'L',
+            task.priority.isNotEmpty ? task.priority[0] : 'L',
             style: const TextStyle(color: Colors.white),
           ),
         ),
         title: Text(
-          task.title ?? '',
+          task.title,
           style: TextStyle(
             fontWeight: FontWeight.bold,
             decoration: task.status == 1 ? TextDecoration.lineThrough : null,
@@ -114,30 +107,49 @@ class _HomeScreenState extends State<HomeScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(task.description ?? ''),
+            if (task.description != null && task.description!.isNotEmpty)
+              Text(task.description!),
             const SizedBox(height: 4),
             Text(
-              task.date ?? '',
+              task.date,
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ],
         ),
         trailing: Checkbox(
           value: task.status == 1,
-          onChanged: (value) {
-            task.status = value! ? 1 : 0;
-            databaseHelper.updateTask(task);
-            updateListView();
+          onChanged: (bool? value) {
+            _completeTask(task, value!);
           },
         ),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddTaskScreen(task: task)),
-          ).then((_) => updateListView());
+          _navigateToAddTask(task: task);
         },
       ),
     );
+  }
+
+  void _navigateToAddTask({Task? task}) async {
+    bool? result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddTaskScreen(task: task),
+      ),
+    );
+    if (result == true) {
+      updateListView();
+    }
+  }
+
+  void _completeTask(Task task, bool isCompleted) async {
+    Task updatedTask = task.copyWith(status: isCompleted ? 1 : 0);
+    await databaseHelper.updateTask(updatedTask);
+    updateListView();
+    if (mounted) {
+       ScaffoldMessenger.of(context).showSnackBar(
+         const SnackBar(content: Text('Task moved to History')),
+       );
+    }
   }
 
   Color _getPriorityColor(String priority) {
@@ -153,16 +165,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void updateListView() {
-    final Future<Database> dbFuture = databaseHelper.initializeDatabase();
-    dbFuture.then((database) {
-      Future<List<Task>> taskListFuture = databaseHelper.getTaskList();
-      taskListFuture.then((taskList) {
-        setState(() {
-          this.taskList = taskList.where((task) => task.status == 0).toList();
-          count = this.taskList!.length;
-        });
-      });
+  Future<void> updateListView() async {
+    final List<Task> allTasks = await databaseHelper.getTaskList();
+    
+    setState(() {
+      taskList = allTasks.where((task) => task.status == 0).toList();
     });
   }
 }

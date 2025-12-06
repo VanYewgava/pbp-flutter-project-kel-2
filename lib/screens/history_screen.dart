@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pbp_project_flutter_speedrun/helpers/database_helper.dart';
 import 'package:pbp_project_flutter_speedrun/models/task_model.dart';
-import 'package:sqflite/sqflite.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -12,9 +11,7 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   DatabaseHelper databaseHelper = DatabaseHelper();
-  List<Task>? taskList;
-  int count = 0;
-
+  List<Task> taskList = []; 
   @override
   void initState() {
     super.initState();
@@ -25,7 +22,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Completed Tasks')),
-      body: taskList == null || taskList!.isEmpty
+      body: taskList.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -44,9 +41,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             )
           : ListView.builder(
-              itemCount: count,
+              itemCount: taskList.length, 
               itemBuilder: (BuildContext context, int position) {
-                return _buildTaskCard(taskList![position]);
+                return _buildTaskCard(taskList[position]);
               },
             ),
     );
@@ -59,10 +56,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: ListTile(
         leading: const Icon(Icons.check_circle, color: Colors.green),
         title: Text(
-          task.title ?? '',
+          task.title, 
           style: const TextStyle(decoration: TextDecoration.lineThrough),
         ),
-        subtitle: Text(task.date ?? ''),
+        subtitle: Text(task.date), 
         trailing: IconButton(
           icon: const Icon(Icons.delete, color: Colors.red),
           onPressed: () {
@@ -74,25 +71,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _deleteTask(Task task) async {
+    if (task.id == null) return;
+
     int result = await databaseHelper.deleteTask(task.id!);
     if (result != 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Task deleted')));
-      updateListView();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Task deleted')),
+        );
+        updateListView();
+      }
     }
   }
 
-  void updateListView() {
-    final Future<Database> dbFuture = databaseHelper.initializeDatabase();
-    dbFuture.then((database) {
-      Future<List<Task>> taskListFuture = databaseHelper.getTaskList();
-      taskListFuture.then((taskList) {
-        setState(() {
-          this.taskList = taskList.where((task) => task.status == 1).toList();
-          count = this.taskList!.length;
-        });
-      });
+  Future<void> updateListView() async {
+    final List<Task> allTasks = await databaseHelper.getTaskList();
+
+    setState(() {
+      taskList = allTasks.where((task) => task.status == 1).toList();
     });
   }
 }

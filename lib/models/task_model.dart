@@ -1,50 +1,57 @@
 class Task {
-  int? id;
-  String? title;
-  String? description;
-  String? date;
-  String? priority;
-  int? status;
+  final int? id;
+  final String title;        
+  final String? description;
+  final String date;       
+  final String priority;  
+  final int status;       
 
   Task({
     this.id,
-    this.title,
+    required this.title,   
     this.description,
-    this.date,
-    this.priority,
-    this.status,
+    required this.date,
+    required this.priority,
+    required this.status,
   });
-
-  Task.withId({
-    this.id,
-    this.title,
-    this.description,
-    this.date,
-    this.priority,
-    this.status,
-  });
-
-  Map<String, dynamic> toMap() {
-    final map = <String, dynamic>{};
-    if (id != null) {
-      map['id'] = id;
-    }
-    map['title'] = title;
-    map['description'] = description;
-    map['date'] = date;
-    map['priority'] = priority;
-    map['status'] = status;
-    return map;
-  }
 
   factory Task.fromMap(Map<String, dynamic> map) {
-    return Task.withId(
+    return Task(
       id: map['id'],
-      title: map['title'],
+      title: map['title'] ?? '',
       description: map['description'],
-      date: map['date'],
-      priority: map['priority'],
-      status: map['status'],
+      date: map['date'] ?? '',
+      priority: map['priority'] ?? 'Low',
+      status: map['status'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'date': date,
+      'priority': priority,
+      'status': status,
+    };
+  }
+
+  Task copyWith({
+    int? id,
+    String? title,
+    String? description,
+    String? date,
+    String? priority,
+    int? status,
+  }) {
+    return Task(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      date: date ?? this.date,
+      priority: priority ?? this.priority,
+      status: status ?? this.status,
     );
   }
 }

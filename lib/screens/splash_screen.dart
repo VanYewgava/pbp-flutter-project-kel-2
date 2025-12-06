@@ -27,15 +27,15 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: Colors.red,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.task_alt, size: 100, color: Colors.white),
-            const SizedBox(height: 20),
-            const Text(
+            SizedBox(height: 20),
+            Text(
               'Task Manager',
               style: TextStyle(
                 fontSize: 32,
@@ -43,8 +43,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 10),
-            const Text(
+            SizedBox(height: 10),
+            Text(
               'Manage Your Daily Tasks',
               style: TextStyle(fontSize: 16, color: Colors.white70),
             ),
